@@ -1,0 +1,11 @@
+{
+  "name": "nft-scanner",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Quan Thien Bao Tran <tranthienbaoquan@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^10.0.0",
+    "web3": "^1.3.6"
+  }
+}
