@@ -32,6 +32,7 @@ const startRaribleCrawler = async () => {
 
       const result = NFTs.getAll();
       console.log(result);
+      console.log(result.length);
     } catch (error) {
       console.error(error);
     }

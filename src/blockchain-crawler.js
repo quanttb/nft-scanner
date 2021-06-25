@@ -73,8 +73,8 @@ const typesArray = [
   },
 ];
 let startBlock = process.env.START_BLOCK;
-// let endBlock = 0;
-let endBlock = Number(process.env.START_BLOCK) + 100;
+let endBlock = 0;
+// let endBlock = Number(process.env.START_BLOCK) + 100;
 
 const startBlockchainCrawler = async () => {
   do {
@@ -83,8 +83,8 @@ const startBlockchainCrawler = async () => {
         setTimeout(r, process.env.SCANNER_LOOP_WAITING_TIME)
       );
 
-      // const currentBlockNumber = await web3.eth.getBlockNumber();
-      // endBlock = currentBlockNumber - Number(process.env.ETH_DELAY_BLOCK_COUNT);
+      const currentBlockNumber = await web3.eth.getBlockNumber();
+      endBlock = currentBlockNumber - Number(process.env.ETH_DELAY_BLOCK_COUNT);
 
       if (startBlock > endBlock) continue;
 
@@ -117,19 +117,29 @@ const startBlockchainCrawler = async () => {
               quantities: Number(event.returnValues._value),
             },
           );
-          console.log('MINT:');
+          // console.log('MINT:');
           // console.log(`\ttokenId: ${event.returnValues._id}`);
           // console.log(`\tquantities: ${event.returnValues._value}`);
           // console.log(`\turi: ${uri}`);
           // console.log(`\tcreator: ${event.returnValues._to}`);
           // console.log(`\ttxHash: ${event.transactionHash}`);
         } else if (event.returnValues._to === ZERO_ADDRESS) {
-          console.log('BURN:');
+          const nft = NFTs.getNFT(event.returnValues._id);
+
+          if (nft) {
+            NFTs.burn(
+              event.returnValues._id,
+              event.returnValues._from,
+              event.returnValues._value,
+            );
+          }
+          // console.log('BURN:');
+          // console.log(event.returnValues);
           // console.log(`\ttokenId: ${event.returnValues._id}`);
           // console.log(`\tquantities: ${event.returnValues._value}`);
           // console.log(`\ttxHash: ${event.transactionHash}`);
         } else {
-          let exchangeLog;
+          // let exchangeLog;
           // try {
           //   const receipt = await web3.eth.getTransactionReceipt(
           //     event.transactionHash
@@ -148,7 +158,18 @@ const startBlockchainCrawler = async () => {
           // } catch (error) {
           //   console.error(error);
           // }
-          console.log('TRANSFER:');
+
+          const nft = NFTs.getNFT(event.returnValues._id);
+
+          if (nft) {
+            NFTs.burn(
+              event.returnValues._id,
+              event.returnValues._from,
+              event.returnValues._value,
+            );
+          }
+
+          // console.log('TRANSFER:');
           // console.log(`\ttokenId: ${event.returnValues._id}`);
           // console.log(`\tquantities: ${event.returnValues._value}`);
           // // if (exchangeLog) {
@@ -162,12 +183,7 @@ const startBlockchainCrawler = async () => {
         }
       };
 
-      console.log('done');
-      // console.log(NFTs.getAll());
-
       startBlock = endBlock + 1;
-
-      return;
     } catch (error) {
       console.error(error);
     }
