@@ -1,6 +1,7 @@
 require('dotenv').config();
 const Web3 = require('web3');
 const RaribleTokenABI = require('../abi/RaribleToken.abi.json');
+const NFTs = require('./nfts');
 
 const web3 = new Web3(process.env.INFURA_ENDPOINT);
 
@@ -75,7 +76,7 @@ let startBlock = process.env.START_BLOCK;
 // let endBlock = 0;
 let endBlock = Number(process.env.START_BLOCK) + 100;
 
-const main = async () => {
+const startBlockchainCrawler = async () => {
   do {
     try {
       await new Promise((r) =>
@@ -102,61 +103,75 @@ const main = async () => {
         continue;
       }
 
-      pastEvents.forEach(async (event) => {
+      for (let event of pastEvents) {
         if (event.returnValues._from === ZERO_ADDRESS) {
           const uri = await raribleTokenContract.methods
             .uri(event.returnValues._id)
             .call();
+          NFTs.mint(
+            event.returnValues._id,
+            Number(event.returnValues._value),
+            uri,
+            {
+              address: event.returnValues._to,
+              quantities: Number(event.returnValues._value),
+            },
+          );
           console.log('MINT:');
-          console.log(`\ttokenId: ${event.returnValues._id}`);
-          console.log(`\tquantities: ${event.returnValues._value}`);
-          console.log(`\turi: ${uri}`);
-          console.log(`\tcreator: ${event.returnValues._to}`);
-          console.log(`\ttxHash: ${event.transactionHash}`);
+          // console.log(`\ttokenId: ${event.returnValues._id}`);
+          // console.log(`\tquantities: ${event.returnValues._value}`);
+          // console.log(`\turi: ${uri}`);
+          // console.log(`\tcreator: ${event.returnValues._to}`);
+          // console.log(`\ttxHash: ${event.transactionHash}`);
         } else if (event.returnValues._to === ZERO_ADDRESS) {
           console.log('BURN:');
-          console.log(`\ttokenId: ${event.returnValues._id}`);
-          console.log(`\tquantities: ${event.returnValues._value}`);
-          console.log(`\ttxHash: ${event.transactionHash}`);
+          // console.log(`\ttokenId: ${event.returnValues._id}`);
+          // console.log(`\tquantities: ${event.returnValues._value}`);
+          // console.log(`\ttxHash: ${event.transactionHash}`);
         } else {
           let exchangeLog;
-          try {
-            const receipt = await web3.eth.getTransactionReceipt(
-              event.transactionHash
-            );
-            const exchangeLogs = receipt.logs.filter(
-              (log) => log.address === process.env.EXCHANGE_V1_ADDRESS
-            );
-
-            if (exchangeLogs.length > 0) {
-              exchangeLog = web3.eth.abi.decodeLog(
-                typesArray,
-                exchangeLogs[0].data,
-                exchangeLogs[0].topics.slice(1)
-              );
-            }
-          } catch (error) {
-            console.error(error);
-          }
-          console.log('TRANSFER:');
-          console.log(`\ttokenId: ${event.returnValues._id}`);
-          console.log(`\tquantities: ${event.returnValues._value}`);
-          // if (exchangeLog) {
-          //   console.log(
-          //     `\tamount: ${web3.utils.fromWei(exchangeLog.buyValue)} ETH`
+          // try {
+          //   const receipt = await web3.eth.getTransactionReceipt(
+          //     event.transactionHash
           //   );
+          //   const exchangeLogs = receipt.logs.filter(
+          //     (log) => log.address === process.env.EXCHANGE_V1_ADDRESS
+          //   );
+
+          //   if (exchangeLogs.length > 0) {
+          //     exchangeLog = web3.eth.abi.decodeLog(
+          //       typesArray,
+          //       exchangeLogs[0].data,
+          //       exchangeLogs[0].topics.slice(1)
+          //     );
+          //   }
+          // } catch (error) {
+          //   console.error(error);
           // }
-          console.log(`\tseller: ${event.returnValues._from}`);
-          console.log(`\tbuyer: ${event.returnValues._to}`);
-          console.log(`\ttxHash: ${event.transactionHash}`);
+          console.log('TRANSFER:');
+          // console.log(`\ttokenId: ${event.returnValues._id}`);
+          // console.log(`\tquantities: ${event.returnValues._value}`);
+          // // if (exchangeLog) {
+          // //   console.log(
+          // //     `\tamount: ${web3.utils.fromWei(exchangeLog.buyValue)} ETH`
+          // //   );
+          // // }
+          // console.log(`\tseller: ${event.returnValues._from}`);
+          // console.log(`\tbuyer: ${event.returnValues._to}`);
+          // console.log(`\ttxHash: ${event.transactionHash}`);
         }
-      });
+      };
+
+      console.log('done');
+      // console.log(NFTs.getAll());
 
       startBlock = endBlock + 1;
+
+      return;
     } catch (error) {
       console.error(error);
     }
   } while (true);
 };
 
-main();
+module.exports = { startBlockchainCrawler };
