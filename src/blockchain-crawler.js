@@ -72,7 +72,8 @@ const typesArray = [
   },
 ];
 let startBlock = process.env.START_BLOCK;
-let endBlock = 0;
+// let endBlock = 0;
+let endBlock = Number(process.env.START_BLOCK) + 100;
 
 const main = async () => {
   do {
@@ -81,8 +82,8 @@ const main = async () => {
         setTimeout(r, process.env.SCANNER_LOOP_WAITING_TIME)
       );
 
-      const currentBlockNumber = await web3.eth.getBlockNumber();
-      endBlock = currentBlockNumber - Number(process.env.ETH_DELAY_BLOCK_COUNT);
+      // const currentBlockNumber = await web3.eth.getBlockNumber();
+      // endBlock = currentBlockNumber - Number(process.env.ETH_DELAY_BLOCK_COUNT);
 
       if (startBlock > endBlock) continue;
 
@@ -103,9 +104,13 @@ const main = async () => {
 
       pastEvents.forEach(async (event) => {
         if (event.returnValues._from === ZERO_ADDRESS) {
+          const uri = await raribleTokenContract.methods
+            .uri(event.returnValues._id)
+            .call();
           console.log('MINT:');
           console.log(`\ttokenId: ${event.returnValues._id}`);
           console.log(`\tquantities: ${event.returnValues._value}`);
+          console.log(`\turi: ${uri}`);
           console.log(`\tcreator: ${event.returnValues._to}`);
           console.log(`\ttxHash: ${event.transactionHash}`);
         } else if (event.returnValues._to === ZERO_ADDRESS) {
