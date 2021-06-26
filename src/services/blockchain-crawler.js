@@ -1,7 +1,5 @@
-require('dotenv').config();
 const Web3 = require('web3');
 const RaribleTokenABI = require('../abi/RaribleToken.abi.json');
-const NFTs = require('./nfts');
 
 const web3 = new Web3(process.env.INFURA_ENDPOINT);
 
@@ -72,11 +70,11 @@ const typesArray = [
     type: 'uint256',
   },
 ];
-let startBlock = process.env.START_BLOCK;
-let endBlock = 0;
-// let endBlock = Number(process.env.START_BLOCK) + 100;
+let db;
 
-const startBlockchainCrawler = async () => {
+const startBlockchainCrawler = async (database) => {
+  db = database;
+
   do {
     try {
       await new Promise((r) =>
@@ -84,7 +82,8 @@ const startBlockchainCrawler = async () => {
       );
 
       const currentBlockNumber = await web3.eth.getBlockNumber();
-      endBlock = currentBlockNumber - Number(process.env.ETH_DELAY_BLOCK_COUNT);
+      const startBlock = await db.getConfig('startBlock');
+      const endBlock = currentBlockNumber - Number(process.env.ETH_DELAY_BLOCK_COUNT);
 
       if (startBlock > endBlock) continue;
 
@@ -108,31 +107,28 @@ const startBlockchainCrawler = async () => {
           const uri = await raribleTokenContract.methods
             .uri(event.returnValues._id)
             .call();
-          NFTs.mint(
-            event.returnValues._id,
-            Number(event.returnValues._value),
-            uri,
-            {
-              address: event.returnValues._to,
-              quantities: Number(event.returnValues._value),
-            },
-          );
-          // console.log('MINT:');
-          // console.log(`\ttokenId: ${event.returnValues._id}`);
-          // console.log(`\tquantities: ${event.returnValues._value}`);
-          // console.log(`\turi: ${uri}`);
-          // console.log(`\tcreator: ${event.returnValues._to}`);
-          // console.log(`\ttxHash: ${event.transactionHash}`);
-        } else if (event.returnValues._to === ZERO_ADDRESS) {
-          const nft = NFTs.getNFT(event.returnValues._id);
 
-          if (nft) {
-            NFTs.burn(
-              event.returnValues._id,
-              event.returnValues._from,
-              event.returnValues._value,
-            );
-          }
+          db.setNFT(
+            event.returnValues._id,
+            {
+              quantities: Number(event.returnValues._value),
+              uri: uri,
+              creator: event.returnValues._to,
+              owner: event.returnValues._to,
+              mintTransactionHash: event.transactionHash,
+            }
+          );
+        } else if (event.returnValues._to === ZERO_ADDRESS) {
+          // const nft = NFTs.getNFT(event.returnValues._id);
+
+          // if (nft) {
+          //   NFTs.burn(
+          //     event.returnValues._id,
+          //     event.returnValues._from,
+          //     event.returnValues._value,
+          //   );
+          // }
+
           // console.log('BURN:');
           // console.log(event.returnValues);
           // console.log(`\ttokenId: ${event.returnValues._id}`);
@@ -159,15 +155,15 @@ const startBlockchainCrawler = async () => {
           //   console.error(error);
           // }
 
-          const nft = NFTs.getNFT(event.returnValues._id);
+          // const nft = NFTs.getNFT(event.returnValues._id);
 
-          if (nft) {
-            NFTs.burn(
-              event.returnValues._id,
-              event.returnValues._from,
-              event.returnValues._value,
-            );
-          }
+          // if (nft) {
+          //   NFTs.burn(
+          //     event.returnValues._id,
+          //     event.returnValues._from,
+          //     event.returnValues._value,
+          //   );
+          // }
 
           // console.log('TRANSFER:');
           // console.log(`\ttokenId: ${event.returnValues._id}`);
@@ -181,9 +177,10 @@ const startBlockchainCrawler = async () => {
           // console.log(`\tbuyer: ${event.returnValues._to}`);
           // console.log(`\ttxHash: ${event.transactionHash}`);
         }
-      };
+      }
 
-      startBlock = endBlock + 1;
+      console.log(`Processed from #${startBlock} to #${endBlock}.`);
+      await db.setConfig('startBlock', endBlock + 1);
     } catch (error) {
       console.error(error);
     }
